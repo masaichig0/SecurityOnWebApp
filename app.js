@@ -1,8 +1,11 @@
 //jshint esversion:6
+require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
 const ejs = require("ejs");
 const mongoose = require("mongoose");
+const encrypt = require("mongoose-encryption");
+
 
 const app = express();
 
@@ -15,7 +18,11 @@ app.use(bodyParser.urlencoded({
 const userSchema = new mongoose.Schema({
     email: String,
     password: String
-  });
+});
+
+//Create those before Create mongoose model.
+const secret = process.env.SECRET_KEY;
+userSchema.plugin(encrypt, { secret: secret, encryptedFields: ["password"]});
 
 const User = mongoose.model("User", userSchema);
 
@@ -55,20 +62,22 @@ app.post("/register", function(req, res) {
     });
 });
 
-app.post("/login",async function(req, res){
+app.post("/login", async function(req, res){
     const username = req.body.username;
     const password = req.body.password;
 
     try {
         const foundUser = await User.findOne({ email: username });
         if (foundUser && foundUser.password === password) {
-          res.render("secrets");
+            res.render("secrets");
+        } else {
+            res.render("login", { error: "Invalid password.", email: username, password: password });
         }
-      } catch (err) {
+    } catch (err) {
         console.log(err);
-      }
-      
+    }
 });
+
 
 
 
