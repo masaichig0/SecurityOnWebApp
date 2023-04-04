@@ -21,8 +21,7 @@ const userSchema = new mongoose.Schema({
 });
 
 //Create those before Create mongoose model.
-const secret = process.env.SECRET_KEY;
-userSchema.plugin(encrypt, { secret: secret, encryptedFields: ["password"]});
+userSchema.plugin(encrypt, { secret: process.env.SECRET_KEY, encryptedFields: ["password"]});
 
 const User = mongoose.model("User", userSchema);
 
