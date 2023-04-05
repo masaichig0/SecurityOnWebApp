@@ -4,7 +4,8 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const ejs = require("ejs");
 const mongoose = require("mongoose");
-const md5 = require("md5");
+const bcrypt = require("bcrypt");
+const saltRounds = 10;
 
 
 const app = express();
@@ -46,33 +47,52 @@ app.get("/register", function(req, res){
 });
 
 app.post("/register", function(req, res) {
-    const newUser = new User({
-        email: req.body.username, 
-        password: md5(req.body.password),
+    bcrypt.hash(req.body.password, saltRounds).then(function(hash) {
+       
+        const newUser = new User({
+            email: req.body.username, 
+            password: hash,
+        });
+    
+        newUser.save().then(() => {
+            res.render("secrets");
+        })
+        .catch((err) => {
+            console.log(err);
+        });
     });
 
-    newUser.save().then(() => {
-        res.render("secrets");
-    })
-    .catch((err) => {
-        console.log(err);
-    });
+    
 });
 
 app.post("/login", async function(req, res){
     const username = req.body.username;
-    const password = md5(req.body.password);
+    const password = req.body.password;
 
     try {
         const foundUser = await User.findOne({ email: username });
-        if (foundUser && foundUser.password === password) {
-            res.render("secrets");
-        } else {
-            res.render("login", { error: "Invalid password." });
+
+        if (!foundUser) {
+            // If no user with the given email address is found, render the login view with an error message
+            return res.render('login', {error: "Invlid username or password. "});
         }
-    } catch (err) {
-        console.log(err);
+        //Compare the provioded password with the hashed password stored in the database
+        const passwordMatchs = await bcrypt.compare(password, foundUser.password);
+
+        if (!passwordMatchs) {
+            // If the passwords don't match, render the login view with an error message
+            return res.render('login', { error: 'Invalid username or password.' });
+        }
+
+        // If the paswords match, render the secrets view
+        res.render('secrets');
+    } catch (error) {
+        // If there's an error while querying the database, log it and render the login view with an error message
+        console.error(error);
+        res.render('login', { error: 'An error occurred. Please try again later.' });
     }
+
+     
 });
 
 
